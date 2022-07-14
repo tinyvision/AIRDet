@@ -385,7 +385,8 @@ class GiraffeLayer(nn.Module):
                 if merge_type == 'csp':
                     after_combine.add_module('CspLayer', CSPLayer(in_channels, out_channels, 2, shortcut=True, depthwise=False, act='silu'))
                 elif merge_type == 'reparam_csp':
-                    after_combine.add_module('RepBlock', RepBlock(in_channels, out_channels, 1))
+                    after_combine.add_module('conv1x1', create_conv2d(in_channels, out_channels, kernel_size=1))
+                    after_combine.add_module('RepBlock', RepBlock(out_channels, out_channels, 1))
                 elif merge_type == 'shuffle':
                     after_combine.add_module('shuffleBlock', ShuffleBlock(in_channels, in_channels))
                     after_combine.add_module('conv1x1', create_conv2d(in_channels, out_channels, kernel_size=1))
