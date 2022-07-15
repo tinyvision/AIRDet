@@ -1,7 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+import sys
+PY37 = sys.version_info[0] == 3 and sys.version_info[1] >= 7
 
-if torch._six.PY37:
+if getattr(torch._six, 'PY37', False) or PY37:
     import importlib
     import importlib.util
     import sys
