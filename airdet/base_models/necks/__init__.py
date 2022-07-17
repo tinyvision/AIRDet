@@ -5,6 +5,7 @@ import copy
 
 from .giraffe_fpn import GiraffeNeck
 from .pafpn import PAFPN
+from .csp_pan import CustomCSPPAN
 
 
 def build_neck(cfg):
@@ -14,3 +15,5 @@ def build_neck(cfg):
         return PAFPN(**neck_cfg)
     elif name == "GiraffeNeck":
         return GiraffeNeck(**neck_cfg)
+    elif name == 'CSPPAN':
+        return CustomCSPPAN(**neck_cfg)

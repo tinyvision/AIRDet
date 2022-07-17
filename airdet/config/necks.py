@@ -41,4 +41,11 @@ GiraffeNeck = {"name": "GiraffeNeck",
                 "alternate_init": False
 }
 
+CSPPAN = {"name": "CSPPAN",
+          "width_mult": 0.50,
+          "depth_mult": 0.33,
+          "act": "relu",
+          "out_channels": [768, 384, 192],
+          "spp": True,
+          }
 

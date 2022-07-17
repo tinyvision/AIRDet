@@ -16,6 +16,7 @@ GFocalV2 = { "name" : "GFocalV2",
            "conv_type": "BaseConv",
            "octbase": 5,
            "l1_switch": "False",
+           "use_ese": False,
          }
 
 

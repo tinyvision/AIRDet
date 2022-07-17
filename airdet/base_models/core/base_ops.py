@@ -24,9 +24,44 @@ def get_activation(name="silu", inplace=True):
         module = nn.ReLU(inplace=inplace)
     elif name == "lrelu":
         module = nn.LeakyReLU(0.1, inplace=inplace)
+    elif name == "hardsigmoid":
+        module = nn.Hardsigmoid(inplace=inplace)
     else:
         raise AttributeError("Unsupported act type: {}".format(name))
     return module
+
+class ConvBNLayer(nn.Module):
+
+    def __init__(self,
+                 ch_in,
+                 ch_out,
+                 filter_size=3,
+                 stride=1,
+                 groups=1,
+                 padding=0,
+                 act=None):
+        super(ConvBNLayer, self).__init__()
+        self.conv = nn.Conv2d(
+            in_channels=ch_in,
+            out_channels=ch_out,
+            kernel_size=filter_size,
+            stride=stride,
+            padding=padding,
+            groups=groups,
+            bias=False
+        )
+        self.bn = nn.BatchNorm2d(ch_out, )
+        if isinstance(act, str):
+            self.act = get_activation(act, inplace=True)
+        else:
+            self.act = act
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.act(x)
+
+        return x
 
 def get_norm(name, out_channels, inplace=True):
     if name == 'bn':

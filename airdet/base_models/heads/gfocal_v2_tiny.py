@@ -16,6 +16,24 @@ from ..core.utils import multi_apply, unmap, reduce_mean, images_to_levels, Scal
 from ..losses.gfocal_loss import GIoULoss, DistributionFocalLoss, QualityFocalLoss
 from airdet.utils import postprocess_gfocal as postprocess
 
+class ESEAttn(nn.Module):
+    def __init__(self, feat_channels):
+        super(ESEAttn, self).__init__()
+        self.fc = nn.Conv2d(feat_channels, feat_channels, 1)
+        self.sig = nn.Sigmoid()
+      #  self.conv = ConvBNLayer(feat_channels, feat_channels, 1, act=act)
+        self.conv = BaseConv(feat_channels, feat_channels, 1)
+
+        self._init_weights()
+
+    def _init_weights(self):
+        nn.init.normal_(self.fc.weight, mean=0, std=0.001)
+
+    def forward(self, feat, avg_feat):
+        weight = self.sig(self.fc(avg_feat))
+        return self.conv(feat * weight)
+
+
 def xyxy2CxCywh(xyxy, size=(640,640)):
     x1 = xyxy[..., 0]
     y1 = xyxy[..., 1]
@@ -104,6 +122,7 @@ class GFocalHead_Tiny(nn.Module):
                  simOTA_cls_weight=1.0,
                  simOTA_iou_weight=3.0,
                  octbase=8,
+                 use_ese=False,
                  **kwargs):
         self.num_classes = num_classes
         self.in_channels = in_channels
@@ -122,7 +141,7 @@ class GFocalHead_Tiny(nn.Module):
         self.total_dim = reg_topk
         self.start_kernel_size = start_kernel_size
         self.decode_in_inference = True # will be set as False, when trying to convert onnx models
-
+        self.use_ese = use_ese
         self.norm = norm
         self.act = act
         self.conv_module = DWConv if conv_type=='DWConv' else BaseConv
@@ -184,6 +203,9 @@ class GFocalHead_Tiny(nn.Module):
         self.reg_convs = nn.ModuleList()
         self.reg_confs = nn.ModuleList()
 
+        self.reg_ese = nn.ModuleList()
+        self.cls_ese = nn.ModuleList()
+
         for i in range(len(self.strides)):
             cls_convs, reg_convs, reg_conf = self._build_not_shared_convs(
                                                 self.in_channels[i],
@@ -191,6 +213,9 @@ class GFocalHead_Tiny(nn.Module):
             self.cls_convs.append(cls_convs)
             self.reg_convs.append(reg_convs)
             self.reg_confs.append(reg_conf)
+
+            self.reg_ese.append(ESEAttn(self.in_channels[i]))
+            self.cls_ese.append(ESEAttn(self.in_channels[i]))
 
         self.gfl_cls = nn.ModuleList(
                             [nn.Conv2d(
@@ -260,6 +285,8 @@ class GFocalHead_Tiny(nn.Module):
             self.gfl_reg,
             self.reg_confs,
             self.scales,
+            self.cls_ese,
+            self.reg_ese,
             )
         flatten_cls_scores = torch.cat(cls_scores, dim=1)
         flatten_bbox_preds = torch.cat(bbox_preds, dim=1)
@@ -282,15 +309,21 @@ class GFocalHead_Tiny(nn.Module):
                 output = postprocess(output, self.num_classes, 0.05, 0.6, imgs)
             return output
 
-    def forward_single(self, x, cls_convs, reg_convs, gfl_cls, gfl_reg, reg_conf, scale):
+    def forward_single(self, x, cls_convs, reg_convs, gfl_cls, gfl_reg, reg_conf, scale, cls_ese, reg_ese):
         """Forward feature of a single scale level.
 
         """
         cls_feat = x
         reg_feat = x
 
+        if self.use_ese:
+            avg_feat = F.adaptive_avg_pool2d(x, (1,1))
+            reg_feat = reg_ese(x, avg_feat)
+            cls_feat = cls_ese(x, avg_feat)
         for cls_conv in cls_convs:
             cls_feat = cls_conv(cls_feat)
+        cls_feat += x
+
         for reg_conv in reg_convs:
             reg_feat = reg_conv(reg_feat)
 
