@@ -31,9 +31,9 @@ def make_parser():
         "--batch_size", type=int, default=None, help="inference image batch nums"
     )
     parser.add_argument(
-        "--img_size", 
-        type=int, 
-        default="640", 
+        "--img_size",
+        type=int,
+        default="640",
         help="inference image shape"
     )
     # onnx part
@@ -114,32 +114,32 @@ def main():
 
     # load model paramerters
     ckpt = torch.load(args.ckpt, map_location="cpu")
-
     model.eval()
     model = model.cpu()
     if "model" in ckpt:
         ckpt = ckpt["model"]
     model.load_state_dict(ckpt, strict=False)
+    model.model_switch()
     logger.info("loading checkpoint done.")
 
     model = replace_module(model, nn.SiLU, SiLU)
     # decouple postprocess
     model.head.decode_in_inference = False
-
+    output_name = f"{args.output_name.replace('.onnx', '')}_fp{args.mode.split('_')[-1]}_bs{args.batch_size}.onnx"
     dummy_input = torch.randn(args.batch_size, 3, args.img_size, args.img_size)
     predictions = model(dummy_input)
     torch.onnx._export(
         model,
         dummy_input,
-        args.output_name,
+        output_name,
         input_names=[args.input],
         output_names=[args.output],
         opset_version=args.opset,
     )
-    logger.info("generated onnx model named {}".format(args.output_name))
+    logger.info("generated onnx model named {}".format(output_name))
 
     if(args.mode in ['trt_32', 'trt_16']):
-        trt_export(args.output_name, args.batch_size, args.img_size, args.img_size, args.mode)
+        trt_export(output_name, args.batch_size, args.img_size, args.img_size, args.mode)
 
 if __name__ == "__main__":
     main()

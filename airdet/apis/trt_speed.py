@@ -13,51 +13,49 @@ import os
 import torch
 from loguru import logger
 
-@logger.catch
-def trt_speed(trt_path, batch_size, h, w):
 
-    # settings
-    target_dtype = np.float32
-
-    # set logs
-    Logger = trt.Logger(trt.Logger.INFO)
-
-    # initialize
-    t = open(trt_path, 'rb')
-    runtime = trt.Runtime(Logger)
-
-    model = runtime.deserialize_cuda_engine(t.read())
+def init_engine(engine, device):
+    import tensorrt as trt
+    from collections import namedtuple,OrderedDict
+    Binding = namedtuple('Binding', ('name', 'dtype', 'shape', 'data', 'ptr'))
+    logger = trt.Logger(trt.Logger.ERROR)
+    trt.init_libnvinfer_plugins(logger, namespace="")
+    with open(engine, 'rb') as f, trt.Runtime(logger) as runtime:
+        model = runtime.deserialize_cuda_engine(f.read())
+    bindings = OrderedDict()
+    for index in range(model.num_bindings):
+        name = model.get_binding_name(index)
+        dtype = trt.nptype(model.get_binding_dtype(index))
+        print(name, dtype)
+        shape = tuple(model.get_binding_shape(index))
+        data = torch.from_numpy(np.empty(shape, dtype=np.dtype(dtype))).to(device)
+        bindings[name] = Binding(name, dtype, shape, data, int(data.data_ptr()))
+    binding_addrs = OrderedDict((n, d.ptr) for n, d in bindings.items())
     context = model.create_execution_context()
+    return context, bindings, binding_addrs, model.get_binding_shape(0)[0]
 
-    input_batch = np.ones([batch_size, 3, h, w], dtype = target_dtype)
-    output = np.empty([batch_size, 8400, config.model.head.num_classes + 5], dtype = target_dtype)
+@logger.catch
+def trt_speed(trt_path, batch_size, h, w, config):
 
-    d_input = cuda.mem_alloc(1 * input_batch.nbytes)
-    d_output = cuda.mem_alloc(1 * output.nbytes)
+    device = 'cuda'
+    context, bindings, binding_addrs, trt_batch_size = init_engine(trt_path, device='cuda')
+    tmp = torch.randn(batch_size, 3, h, w).to(device)
+    # warm up for 10 times
+    for _ in range(10):
+        binding_addrs['images_arrays'] = int(tmp.data_ptr())
+        context.execute_v2(list(binding_addrs.values()))
 
-    bindings = [int(d_input), int(d_output)]
+    imgs = torch.randn(batch_size, 3, h, w)
+    imgs = imgs.to(device, non_blocking=True)
+    # preprocess
+    imgs = imgs.float()
+    latency = 0
+    for _ in range(100):
+        # inference
+        t0 = time.time()
+        binding_addrs['image_arrays'] = int(imgs.data_ptr())
+        context.execute_v2(list(binding_addrs.values()))
+        latency += (time.time() - t0)  # inference time
 
-    stream = cuda.Stream()
+    logger.info("Model inference time {:.4f}ms / img per device".format(latency / 100 / batch_size * 1000))
 
-    def predict(batch): # result gets copied into output
-        # transfer input data to device
-        cuda.memcpy_htod_async(d_input, batch, stream)
-        # execute model
-        context.execute_async_v2(bindings, stream.handle, None)
-        # transfer predictions back
-        cuda.memcpy_dtoh_async(output, d_output, stream)
-        # syncronize threads
-        stream.synchronize()
-
-        return output
-        # tensorrt engine inference
-
-    # Warming up
-    pred = predict(input_batch)
-
-    # Model Inference
-    t0 = time.time()
-    for i in range(500):
-        pred = predict(input_batch)
-    t_all = time.time() - t0
-    logger.info("Model inference time {:.4f}s / img per device".format(t_all / 500 / batch_size))
