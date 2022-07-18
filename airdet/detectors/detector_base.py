@@ -23,6 +23,8 @@ class Detector(nn.Module):
         self.head = build_head(config.model.head)
 
         self.config = config
+        self.conf_thre = self.config.testing.conf_threshold
+        self.nms_thre = self.config.testing.nms_iou_threshold
 
     def init_bn(self, M):
 
@@ -85,7 +87,12 @@ class Detector(nn.Module):
                             )
             return loss_dict
         else:
-            outputs = self.head(fpn_outs, imgs=images)
+            outputs = self.head(
+			fpn_outs, 
+			imgs=images, 
+			conf_thre=self.conf_thre, 
+			nms_thre=self.nms_thre
+			)
             return outputs
 
 

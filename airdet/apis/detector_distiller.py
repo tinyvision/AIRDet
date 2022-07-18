@@ -172,7 +172,7 @@ class Distiller:
         self.optimizer = self.build_optimizer()
 
         # build distiller
-        distill = FeatureLoss(self.args.distiller, self.args.loss_weight).to(self.device)
+        distill = FeatureLoss(self.args.distiller, self.config.model.neck.out_fpn_channels, self.args.loss_weight).to(self.device)
 
         # resume model
         if self.config.training.resume_path is not None:

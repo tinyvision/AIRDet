@@ -16,7 +16,7 @@ from ..core.utils import multi_apply, unmap, reduce_mean, images_to_levels, Scal
 from ..losses.gfocal_loss import GIoULoss, DistributionFocalLoss, QualityFocalLoss
 from airdet.utils import postprocess_gfocal as postprocess
 
-def xyxy2CxCywh(xyxy, size=(640,640)):
+def xyxy2CxCywh(xyxy, size=None):
     x1 = xyxy[..., 0]
     y1 = xyxy[..., 1]
     x2 = xyxy[..., 2]
@@ -24,9 +24,12 @@ def xyxy2CxCywh(xyxy, size=(640,640)):
 
     cx = (x1+x2) /2
     cy = (y1+y2) /2
+
+    w = x2 - x1
+    h = y2 - y1
     if size is not None:
-    	w = (x2-x1).clamp(min=0, max=size[1])
-    	h = (y2-y1).clamp(min=0, max=size[0])
+    	w = w.clamp(min=0, max=size[1])
+    	h = h.clamp(min=0, max=size[0])
     return torch.stack([cx, cy, w, h], axis=-1)
 
 
@@ -228,7 +231,7 @@ class GFocalHead_Tiny(nn.Module):
             normal_init(self.gfl_cls[i], std=0.01, bias=bias_cls)
             normal_init(self.gfl_reg[i], std=0.01)
 
-    def forward(self, xin, labels=None, imgs=None):
+    def forward(self, xin, labels=None, imgs=None, conf_thre=0.05, nms_thre=0.7):
 
         # prepare labels during training
         b, c, h, w = xin[0].shape
@@ -279,7 +282,7 @@ class GFocalHead_Tiny(nn.Module):
                 flatten_bbox_preds,
                 mlvl_priors)
             if self.decode_in_inference:
-                output = postprocess(output, self.num_classes, 0.05, 0.6, imgs)
+                output = postprocess(output, self.num_classes, conf_thre, nms_thre, imgs)
             return output
 
     def forward_single(self, x, cls_convs, reg_convs, gfl_cls, gfl_reg, reg_conf, scale):

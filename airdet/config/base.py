@@ -89,7 +89,7 @@ testing = easydict({
             "use_tta": False,
             "augmentation": tta,
             "conf_threshold": 0.05,
-            "nms_iou_threshold": 0.6,
+            "nms_iou_threshold": 0.7,
             "multi_gpu": True,
             "input_min_size": (640,),
             "input_max_size": 640,
@@ -149,6 +149,20 @@ class Config(metaclass=ABCMeta):
                 factory="PascalVOCDataset",
                 args=args,
             )
+        elif "custom" in name:
+            data_dir = DatasetCatalog.DATA_DIR
+            attrs = DatasetCatalog.DATASETS[name]
+            args = dict(
+                data_dir=join(data_dir, attrs["data_dir"]),
+                split=attrs["split"],
+		CLASS2ID=self.dataset.class2id,
+            )
+            return dict(
+                factory="CustomVOCDataset",
+                args=args,
+            )
+		
+			
 
         return None
         # raise RuntimeError("Dataset not available: {}".format(name))

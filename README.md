@@ -1,3 +1,4 @@
+English | [简体中文](README_cn.md)
 <div align="center"><img src="assets/airdet.png" width="500"></div>
 
 ## Introduction
@@ -6,7 +7,7 @@ AIRDet is an efficiency-oriented anchor-free object detector, aims to enable rob
 
 ## Updates
 -  **[2022/06/23: We release  AIRDet-0.0.1!]**
-    * Release AIRDet-series object detection models, e.g. AIRDet-s and AIRDet-m. AIRDet-s achievs mAP as 44.1% on COCO val dataset and 2.8ms latency on Nvidia-V100. AIRDet-m is a larger model build upon AIRDet-s in a heavy neck paradigm, which achieves robust improvement in detection of different object scales. For more information, please refer to [Giraffe-neck](https://arxiv.org/abs/2202.04256).
+    * Release AIRDet-series object detection models, e.g. AIRDet-s and AIRDet-m. AIRDet-s achievs mAP as 44.2% on COCO val dataset and 2.8ms latency on Nvidia-V100. AIRDet-m is a larger model build upon AIRDet-s in a heavy neck paradigm, which achieves robust improvement in detection of different object scales. For more information, please refer to [Giraffe-neck](https://arxiv.org/abs/2202.04256).
     * Release model convert tools for esay deployment, surppots onnx and tensorRT-fp32, TensorRT-fp16.
 
 ## Comming soon
@@ -14,13 +15,13 @@ AIRDet is an efficiency-oriented anchor-free object detector, aims to enable rob
 - AIRDet-tiny and AIRDet-nano.
 - Model distillation. 
 
-
 ## Model Zoo
 |Model |size |mAP<sup>val<br>0.5:0.95 | Latency V100<br>TRT-FP32-BS32| Latency V100<br>TRT-FP16-BS32| FLOPs<br>(G)| weights |
 | ------        |:---: | :---:     |:---:|:---: | :---: | :----: |
 |[Yolox-s](./configs/yolox_s.py)   | 640 | 40.5 | 3.4 | 2.3 | 26.81 | [link]() |
-|[AIRDet-s](./configs/airdet_s.py) | 640 | 44.2 | 4.4 | 2.8 | 27.56 | [link]() |
-|[AIRDet-m](./configs/airdet_m.py) | 640 | 48.2 | 8.3 | 4.4 | 76.61 | [link]() |
+|[AIRDet-s](./configs/airdet_s.py) | 640 | 44.2 | 4.4 | 2.8 | 27.56 | [link](https://drive.google.com/file/d/119W87oZ4zcJvvjzYCmBudX38cRpZbQc4/view?usp=sharing) |
+|[AIRDet-m](./configs/airdet_m.py) | 640 | 48.2 | 8.3 | 4.4 | 76.61 | [link](https://drive.google.com/file/d/1EjsdQTbUF4JMzH6wxXcYI6zs88c--PzL/view?usp=sharing) |
+
 
 - We report the mAP of models on COCO2017 validation set.
 - The latency in this table are measured without post-processing.
@@ -84,11 +85,13 @@ python -m torch.distributed.launch --nproc_per_node=8 tools/eval.py -f configs/a
 
 <details>
 <summary> Training on Custom Data </summary>
+Airdet supports COCO and VOC format. Before training, you need to transform your data into COCO or VOC format. We provide
+the usage of COCO format in default config. If you are trying to use VOC format, here is a breif example.
 
-Step.1 Prepare your own dataset with images and labels. the directory structure should be as follow:
+Step.1 Transform your own dataset into VOC format. the directory structure should be as follow:
 
 ```shell script
-BusinessVOC/
+Bus/
     Annotations/
         *.xml
     JPEGImages/
@@ -100,18 +103,18 @@ BusinessVOC/
             val.txt
 ```
 
-Step.2 Write the corresponding Train/Eval Dataset Path.
+Step.2 Write the corresponding dataset name and Train/Eval dataset path, the dataset name should be like [xxx_custom_train/val].
 ```shell script
-self.dataset.train_ann = ("VOC_train",)
-self.dataset.val_ann = ("VOC_val")
+self.dataset.train_ann = ("bus_custom_train",)
+self.dataset.val_ann = ("bus_custom_val")
 self.dataset.data_dir = 'datasets'
 self.dataset.data_list = {
-    "VOC_train": {
-        "data_dir": "BusinessVOC/",
+    "bus_custom_train": {
+        "data_dir": "Bus/",
         "split": "train"
     },
-    "VOC_val": {
-        "data_dir": "BusinessVOC/",
+    "bus_custom_val": {
+        "data_dir": "Bus/",
         "split": "val"
     }, 
 }
@@ -124,32 +127,15 @@ self.dataset.class2id = {
 self.model.head.num_classes = len(self.dataset.class2id.keys())
 ```
 
-Step.3 Write your own `get_data` method:
+Step.3 Put your dataset under `$AIRDet/datasets`.
 ```shell script
-def get_data(self, name):
-     data_dir = self.dataset.data_dir
-
-     if name not in self.dataset.data_list:
-         return None
-     
-     attrs = self.dataset.data_list[name]
-     args = dict(
-         data_dir = os.path.join(data_dir, attrs['data_dir']),
-         split = attrs['split'],
-         CLASS2ID = self.dataset.class2id,
-     )
-     return dict(
-         factory="CustomVocDataset",
-         args = args,
-     )
+ln -s /path/to/your/Bus/ ./datasets/Bus/
 ```
 
-Step.4 Put your dataset under `$LightVision_DIR/datasets`.
+Step.4 Create your config file to control everything, including model setting, training setting, and test setting, e.g. bus_s.py.  
 ```shell script
-ln -s /path/to/your/BusinessVOC/ ./datasets/BusinessVOC/
+python -m torch.distributed.launch --nproc_per_node=8 tools/train.py -f configs/bus_s.py
 ```
-
-Step.5 Create your config file to control everything, including model setting, training setting, and test setting.
 </details>
 
 ## Deploy
@@ -183,7 +169,7 @@ sudo chmod a+r /usr/local/cuda/lib64/libcudnn*
 ```shell
 cd TensorRT-7.2.1.6/python
 pip install tensorrt-7.2.1.6-cp37-none-linux_x86_64.whl
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:TensorRT-7.0.0.11/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:TensorRT-7.2.1.6/lib
 ```
 2.4 pycuda
 ```shell
@@ -207,8 +193,8 @@ python tools/trt_inference.py -f configs/airdet_s.py -t deploy/airdet_s_32.trt -
 ```
 
 ## Distillation
-AIRDet series support the dark knowledge transfer through distillation to improve performance especially for tiny models. From now on, we have support mimicking and mask generative on feature distillation, and appoint distiller by --d. Note the distiller mode has two options:[mimic, mgd].
+AIRDet series support the dark knowledge transfer through distillation to improve performance especially for tiny models. We support mimicking and mask generative on feature distillation, and appoint distiller by --d. Note the distiller mode has two options:[mimic, mgd].
 
 ```shell script
-python -m torch.distributed.launch --nproc_per_node=4 tools/distiller.py --tea_config configs/airdet_m.py --stu_config configs/airdet_s.py --tea_ckpt airdet_m.pth --d mimic --loss_weight 0.1
+python -m torch.distributed.launch --nproc_per_node=8 tools/distiller.py --tea_config configs/airdet_m.py --stu_config configs/airdet_s.py --tea_ckpt airdet_m.pth --d mimic --loss_weight 0.1
 ```

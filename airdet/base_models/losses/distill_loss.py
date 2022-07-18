@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 
 class FeatureLoss(nn.Module):
-    def __init__(self, distiller, loss_weight=0.1):
+    def __init__(self, distiller, FPN_Channels, loss_weight=0.1):
         super(FeatureLoss, self).__init__()
 
         if(distiller == "mimic"):
-            self.feature_loss = MimicLoss(loss_weight)
+            self.feature_loss = MimicLoss(FPN_Channels, loss_weight)
         elif(distiller == "mgd"):
-            self.feature_loss = MGDLoss(loss_weight)
+            self.feature_loss = MGDLoss(FPN_Channels, loss_weight)
         else:
             assert False
 
@@ -19,13 +19,12 @@ class FeatureLoss(nn.Module):
 
 
 class MimicLoss(nn.Module):
-    def __init__(self, loss_weight=0.1):
+    def __init__(self, FPN_Channels, loss_weight=0.1):
         super(MimicLoss, self).__init__()
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.loss_weight = loss_weight
         self.mse = nn.MSELoss()
 
-        FPN_Channels = [192, 256, 512]
         self.align_module = [nn.Conv2d(channel, channel, kernel_size=1, stride=1, padding=0).to(device) for channel in FPN_Channels]
 
     def forward(self, y_s, y_t):
@@ -44,14 +43,13 @@ class MimicLoss(nn.Module):
 
 
 class MGDLoss(nn.Module):
-    def __init__(self, loss_weight=0.1, alpha_mgd=0.00002, lambda_mgd=0.65):
+    def __init__(self, FPN_Channels, loss_weight=0.1, alpha_mgd=0.00002, lambda_mgd=0.65):
         super(MGDLoss, self).__init__()
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.loss_weight = loss_weight
         self.alpha_mgd = alpha_mgd
         self.lambda_mgd = lambda_mgd
 
-        FPN_Channels = [192, 256, 512]
         self.align_module = [nn.Conv2d(channel, channel, kernel_size=1, stride=1, padding=0).to(device) for channel in FPN_Channels]
 
         self.generation = [nn.Sequential(
