@@ -206,3 +206,9 @@ Step.3 trt engine inference demo and appoint test image by -p.
 python tools/trt_inference.py -f configs/airdet_s.py -t deploy/airdet_s_32.trt -p assets/dog.jpg --img_size 640 --nms 0.7
 ```
 
+## Distillation
+AIRDet series support the dark knowledge transfer through distillation to improve performance especially for tiny models. From now on, we have support mimicking and mask generative on feature distillation, and appoint distiller by --d. Note the distiller mode has two options:[mimic, mgd].
+
+```shell script
+python -m torch.distributed.launch --nproc_per_node=4 tools/distiller.py --tea_config configs/airdet_m.py --stu_config configs/airdet_s.py --tea_ckpt airdet_m.pth --d mimic --loss_weight 0.1
+```
