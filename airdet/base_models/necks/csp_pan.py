@@ -216,6 +216,4 @@ class CustomCSPPAN(nn.Module):
             block = torch.cat([route, block], axis=1)
             route = self.pan_stages[i](block)
             pan_feats.append(route)
-
-        #return pan_feats[::-1]
         return pan_feats

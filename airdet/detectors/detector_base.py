@@ -10,6 +10,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from airdet.base_models.heads import build_head
 from airdet.base_models.necks import build_neck
 from airdet.base_models.backbones import build_backbone
+from airdet.base_models.core.repvgg_block import RepVggBlock
 from airdet.structures.image_list import to_image_list
 
 import numpy as np
@@ -56,6 +57,11 @@ class Detector(nn.Module):
         self.load_state_dict(new_state_dict)
         print(f'load params from {pretrain_model}')
 
+    def model_switch(self):
+        for layer in self.modules():
+            if isinstance(layer, RepVggBlock):
+                layer.switch_to_deploy()
+        print('switch model into deply status!')
 
     def forward(self, x, targets=None):
         images = to_image_list(x)

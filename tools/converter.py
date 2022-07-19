@@ -67,7 +67,7 @@ def trt_export(onnx_path, batch_size, inference_h, inference_w, mode):
 
     TRT_LOGGER = trt.Logger()
     trt_mode = mode.split('_')[-1]
-    engine_path = onnx_path.replace('.onnx', f'_{trt_mode}.trt')
+    engine_path = onnx_path.replace('.onnx', '.trt')
 
     EXPLICIT_BATCH = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
 
@@ -116,9 +116,9 @@ def main():
     ckpt = torch.load(args.ckpt, map_location="cpu")
     model.eval()
     model = model.cpu()
-    if "model" in ckpt:
-        ckpt = ckpt["model"]
-    model.load_state_dict(ckpt, strict=False)
+    #if "model" in ckpt:
+    #    ckpt = ckpt["model"]
+    #model.load_state_dict(ckpt, strict=False)
     model.model_switch()
     logger.info("loading checkpoint done.")
 

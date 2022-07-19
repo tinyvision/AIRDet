@@ -110,5 +110,5 @@ class CSPDarknet(nn.Module):
         x = self.dark5(x)
         outputs["dark5"] = x
         features_out = [outputs["stem"], outputs["dark2"], outputs["dark3"], outputs["dark4"], outputs["dark5"]]
-
+        #features_out = features_out[2:]
         return features_out

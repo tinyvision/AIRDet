@@ -11,10 +11,17 @@ CSPDarknet = {"name": "CSPDarknet",
 CSPRepResnet = {"name": "CSPRepResnet",
                 "depth_mult": 0.33,
                 "width_mult": 0.5,
-                "return_idx": [1,2,3],
+                "return_idx": [0,1,2,3],
                 "use_large_stem": True,
                 "layers": [3, 6, 6, 3],
                 "channels": [64, 128, 256, 512, 1024],
                 "act": "relu",
                 }
+
+EfficientRep = {
+                "name": "EfficientRep",
+                "in_channels": 3,
+                "num_repeats": [1, 3, 4, 6, 2],
+                "channels_list": [32, 64, 128, 256, 512],
+    }
 

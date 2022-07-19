@@ -47,7 +47,7 @@ class CSPResStage(nn.Module):
             for i in range(n)
         ])
         if attn:
-            self.attn = EffectiveSELayer(ch_mid, act='hardsigmoid')
+            self.attn = EffectiveSELayer(ch_mid, act=act) # act=hardsigmoid
         else:
             self.attn = None
 
@@ -70,6 +70,7 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
         assert ch_in == ch_out
         self.conv1 = ConvBNLayer(ch_in, ch_out, 3, stride=1, padding=1, act=act)
+        #self.conv2 = ConvBNLayer(ch_out, ch_out, 3, stride=1, padding=1, act=act)
         self.conv2 = RepVggBlock(ch_out, ch_out, act=act)
         self.shortcut = shortcut
 

@@ -55,6 +55,7 @@ def trt_speed(trt_path, batch_size, h, w, config):
         t0 = time.time()
         binding_addrs['image_arrays'] = int(imgs.data_ptr())
         context.execute_v2(list(binding_addrs.values()))
+        preds = bindings['output'].data
         latency += (time.time() - t0)  # inference time
 
     logger.info("Model inference time {:.4f}ms / img per device".format(latency / 100 / batch_size * 1000))

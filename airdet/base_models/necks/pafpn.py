@@ -91,7 +91,10 @@ class PAFPN(nn.Module):
 
         #  backbone
         features = [out_features[f] for f in self.in_features]
+        for f in features:
+            print(f.shape)
         [x2, x1, x0] = features
+        print(x2.shape, x1.shape, x0.shape)
 
         fpn_out0 = self.lateral_conv0(x0)  # 1024->512/32
         f_out0 = self.upsample(fpn_out0)  # 512/16
